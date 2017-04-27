@@ -1,0 +1,240 @@
+<!Doctype html>
+<html>
+	<head>
+		<meta charset="utf=8">
+		<style>
+			.arena {
+				position: relative;
+				width:600px;
+				height: 600px;
+				background: #102333;
+			}
+			.player {
+				position: absolute;
+				left: 0;
+				top: 0;
+				width: 20px;
+				height: 20px;
+				border-radius: 15%;
+				background: #00aaee;
+				z-index: 1;
+			}
+			.body {
+				position: absolute;
+				background: #72d688;
+				border-radius: 15%;
+			}
+			.score {
+				font-size: 18px;
+			}
+
+			.score_best {
+				display: none;
+			}
+		</style>
+	</head>
+	<body>
+
+		<div class="score">Score: <span class="score__num">0</span></div>
+		<div class="score score_best">Best score: <span class="score__best"></span></div>
+		<button class="start">Start</button><button class="pause">Pause</button><button class="reset">Reset</button>
+		<div class="arena">
+			<div class="player"></div>
+		</div>
+
+		<script>
+			var player = document.querySelector('.player'),
+				playerWidth = parseInt(player.offsetWidth),
+				playerHeight = parseInt(player.offsetHeight),
+				playerPosY,
+				playerPosX,
+				arena = document.querySelector('.arena'),
+				arenaWidth = parseInt(arena.offsetWidth),
+				arenaHeight = parseInt(arena.offsetHeight);
+
+			var speedDefault = 100,
+				stepPlayer = (playerWidth + playerHeight) / 2,
+				maxPosY = arenaHeight,
+				maxPosX = arenaWidth;
+
+			var body,
+				total = 0,
+				arrayBody = []
+				score_best_total = document.querySelector('.score__best'),
+				score_best = document.querySelector('.score_best');
+
+			function renderBody() {
+				function roundToTen(num) {
+					return Math.floor( (Math.random() * num) / playerWidth ) * playerWidth;
+				}
+				var posRandomY = roundToTen(maxPosY);
+				var posRandomX = roundToTen(maxPosX);
+
+			  body = document.createElement('div');
+				body.className = 'body';
+				body.style.width = playerWidth + "px";
+				body.style.height = playerHeight + "px";
+				body.style.top = posRandomY + "px";
+				body.style.left = posRandomX + "px";
+			}
+
+			var arrayPositions;
+
+			function initPosition() {
+				playerPosY = parseInt(player.offsetTop);
+				playerPosX = parseInt(player.offsetLeft);
+				bodyY = parseInt(body.offsetTop);
+				bodyX = parseInt(body.offsetLeft);
+				arrayPositions = [];
+
+				if(total === arrayBody.length && total !== 0) {
+					for (var i = 0; i < arrayBody.length; i++) {
+						arrayBody[i].setAttribute('id', 'body_' + i);
+						arena.append(arrayBody[i]);
+						arrayPositions.push({
+								posY: parseInt(arrayBody[i].offsetTop),
+								posX: parseInt(arrayBody[i].offsetLeft)
+							});
+					}
+				}
+			}
+
+			function initPositionBody() {
+				if(total === arrayBody.length) {
+					for (var i = 0; i < arrayBody.length; i++) {
+						if (i === 0) {
+							arrayBody[i].style.top = playerPosY + "px";
+							arrayBody[i].style.left = playerPosX + "px";
+						}else{
+							arrayBody[i].style.top = arrayPositions[i-1].posY + "px";
+							arrayBody[i].style.left = arrayPositions[i-1].posX + "px";
+						}
+					}
+				}
+			}
+
+			var step;
+			var score__num = document.querySelector('.score__num');
+			var posNow;
+			function startStep(pos) {
+				posNow = pos;
+				step = setInterval(function() {
+					var	scoreVal = parseInt(score__num.innerText);
+
+					if(pos === "UP") {
+						if(playerPosY < playerHeight) {
+							player.style.top = arenaHeight - playerHeight + "px";
+						}else{
+							player.style.top = playerPosY - stepPlayer + "px";
+						}
+					}else if(pos === "DOWN") {
+						if(playerPosY > arenaHeight - playerHeight * 2) {
+							player.style.top = "0px";
+						}else{
+							player.style.top = playerPosY + stepPlayer + "px";
+						}
+					}else if(pos === "LEFT") {
+						if(playerPosX < playerWidth) {
+							player.style.left = arenaWidth - playerWidth + "px";
+						}else{
+							player.style.left = playerPosX - stepPlayer + "px";
+						}
+					}else if(pos === "RIGHT") {
+						if(playerPosX > arenaWidth - playerWidth * 2) {
+							player.style.left = "0px";
+						}else{
+							player.style.left = playerPosX + stepPlayer + "px";
+						}
+					}
+
+					function gameOver() {
+						for(var i = 0; i < arrayBody.length; i++) {
+							arrayBody[i].style.background = "#e64046";
+						}
+					}
+
+					if(playerPosY === bodyY && playerPosX === bodyX) {
+						total++;
+						arrayBody.push(body);
+						arena.removeChild(body);
+						score__num.innerText = scoreVal + 10;
+						renderBody();
+						arena.append(body);
+					}
+
+					initPositionBody();
+					initPosition();
+
+					for(var i = 0; i < arrayBody.length; i++) {
+						if(playerPosY === arrayBody[i].offsetTop && playerPosX === arrayBody[i].offsetLeft) {
+							gameOver();
+							stopStep();
+							score_best_total.innerText = score__num.innerText;
+							score_best.style.display = "block";
+						}
+					}
+
+				}, speedDefault);
+			}
+
+			function stopStep() { clearInterval(step); }
+
+			window.onkeydown = window.onkeypress = handleClick;
+			function handleClick(ev) {
+				var UP = 38,
+					DOWN = 40,
+					LEFT = 37,
+					RIGHT = 39;
+
+				stopStep();
+
+				switch(ev.keyCode) {
+					case UP:
+						startStep("UP");
+						break;
+					case DOWN:
+						startStep("DOWN");
+						break;
+					case LEFT:
+						startStep("LEFT");
+						break;
+					case RIGHT:
+						startStep("RIGHT");
+						break;
+					default:
+						break;
+				}
+			}
+
+			document.querySelector(".start").addEventListener('click', function() {
+				if(arena.contains(body)) {
+					startStep(posNow);
+				}else{
+					renderBody();
+					arena.append(body);
+					initPosition();
+					startStep("DOWN");
+				}
+			});
+
+			document.querySelector(".pause").addEventListener('click', function() {
+				stopStep();
+			});
+
+			document.querySelector(".reset").addEventListener('click', function() {
+				for(var i = 0; i < arrayBody.length; i++) {
+					arena.removeChild(arrayBody[i]);
+				}
+				arrayBody.splice(0, total);
+				total = 0;
+				score_best.style.display = "none";
+				score__num.innerText = "0";
+				stopStep();
+				arena.removeChild(body);
+				player.style.top = "0px";
+				player.style.left = "0px";
+			});
+
+		</script>
+	</body>
+</html>
